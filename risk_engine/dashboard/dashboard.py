@@ -7,6 +7,7 @@ import psycopg
 import pandas as pd
 from fpdf import FPDF
 from auth import login_page, logout_button
+from risk_analysis import run_risk_analysis
 from data_entry import (
     supplier_form,
     material_form,
@@ -33,13 +34,16 @@ st.title("🏭 Industrial Decision Intelligence & Risk Management System")
 st.caption("Industrial monitoring, analysis and risk management dashboard")
 
 def get_connection():
-    return psycopg.connect(
-        host=st.secrets["postgres"]["host"],
-        port=st.secrets["postgres"]["port"],
-        dbname=st.secrets["postgres"]["dbname"],
-        user=st.secrets["postgres"]["user"],
-        password=st.secrets["postgres"]["password"]
-    )
+    params = {
+        "host": st.secrets["postgres"]["host"],
+        "port": st.secrets["postgres"]["port"],
+        "dbname": st.secrets["postgres"]["dbname"],
+        "user": st.secrets["postgres"]["user"],
+        "password": st.secrets["postgres"]["password"],
+    }
+    if "sslmode" in st.secrets["postgres"]:
+        params["sslmode"] = st.secrets["postgres"]["sslmode"]
+    return psycopg.connect(**params)
 
 def run_query(query):
     conn = get_connection()
@@ -347,6 +351,19 @@ with tab5:
 # ================= RISK ALERTS =================
 with tab6:
     st.subheader("Risk Alerts Management")
+
+    # ------ Refresh Risk Analysis Button ------
+    col_a, col_b = st.columns([1, 3])
+    with col_a:
+        if st.button("🔄 Refresh Risk Analysis", type="primary", use_container_width=True):
+            with st.spinner("Analyzing all risks..."):
+                new_alerts = run_risk_analysis()
+            if new_alerts > 0:
+                st.success(f"✅ {new_alerts} new alert(s) added!")
+                st.rerun()
+            else:
+                st.info("✅ No new alerts. Everything is up to date.")
+    st.markdown("---")
 
     col1, col2 = st.columns(2)
     with col1:
