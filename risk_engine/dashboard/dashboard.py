@@ -8,6 +8,7 @@ import pandas as pd
 from fpdf import FPDF
 from auth import login_page, logout_button
 from risk_analysis import run_risk_analysis
+from excel_import import import_excel, build_template_excel
 from data_entry import (
     supplier_form,
     material_form,
@@ -352,7 +353,6 @@ with tab5:
 with tab6:
     st.subheader("Risk Alerts Management")
 
-    # ------ Refresh Risk Analysis Button ------
     col_a, col_b = st.columns([1, 3])
     with col_a:
         if st.button("🔄 Refresh Risk Analysis", type="primary", use_container_width=True):
@@ -450,38 +450,107 @@ with tab6:
 # ================= DATA ENTRY =================
 with tab7:
     st.header("📝 Data Entry")
-    st.caption("Add new records to the system.")
+    st.caption("Add new records manually or upload an Excel file for bulk import.")
 
     entry_option = st.radio(
-        "Choose what to add:",
+        "Choose method:",
         [
-            "Add Supplier",
-            "Add Material",
-            "Add Inventory",
-            "Add Supplier Performance",
-            "Add Production",
-            "Add Order",
-            "Add Delivery"
+            "📄 Manual Entry",
+            "📤 Excel Upload (Bulk Import)"
         ],
         horizontal=True
     )
 
     st.markdown("---")
 
-    if entry_option == "Add Supplier":
-        supplier_form()
-    elif entry_option == "Add Material":
-        material_form()
-    elif entry_option == "Add Inventory":
-        inventory_form()
-    elif entry_option == "Add Supplier Performance":
-        supplier_performance_form()
-    elif entry_option == "Add Production":
-        production_form()
-    elif entry_option == "Add Order":
-        order_form()
-    elif entry_option == "Add Delivery":
-        delivery_form()
+    # -------------- MANUAL ENTRY --------------
+    if entry_option == "📄 Manual Entry":
+        manual_option = st.radio(
+            "What to add:",
+            [
+                "Add Supplier",
+                "Add Material",
+                "Add Inventory",
+                "Add Supplier Performance",
+                "Add Production",
+                "Add Order",
+                "Add Delivery"
+            ],
+            horizontal=True
+        )
+
+        st.markdown("---")
+
+        if manual_option == "Add Supplier":
+            supplier_form()
+        elif manual_option == "Add Material":
+            material_form()
+        elif manual_option == "Add Inventory":
+            inventory_form()
+        elif manual_option == "Add Supplier Performance":
+            supplier_performance_form()
+        elif manual_option == "Add Production":
+            production_form()
+        elif manual_option == "Add Order":
+            order_form()
+        elif manual_option == "Add Delivery":
+            delivery_form()
+
+    # -------------- EXCEL UPLOAD --------------
+    else:
+        st.subheader("📤 Bulk Import from Excel")
+
+        st.info(
+            "Your Excel file should have these sheets (sheet names are matched "
+            "automatically): **Suppliers, Materials, Inventory, "
+            "SupplierPerformance, Production**. "
+            "Column names should match the template."
+        )
+
+        # Download template button
+        try:
+            template_data = build_template_excel()
+            st.download_button(
+                label="⬇️ Download Excel Template",
+                data=template_data,
+                file_name="industrial_data_template.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        except Exception as e:
+            st.error("Could not build template.")
+            st.write(e)
+
+        st.markdown("---")
+
+        uploaded = st.file_uploader(
+            "Choose your Excel file (.xlsx)",
+            type=["xlsx"],
+            key="excel_upload"
+        )
+
+        if uploaded is not None:
+            if st.button("🚀 Import Data", type="primary"):
+                with st.spinner("Importing data... please wait..."):
+                    try:
+                        result = import_excel(uploaded)
+                        st.success("✅ Import complete!")
+                        st.markdown("### Summary")
+                        st.write(f"- **Suppliers** added: {result['suppliers']}")
+                        st.write(f"- **Materials** added: {result['materials']}")
+                        st.write(f"- **Inventory** records added: {result['inventory']}")
+                        st.write(f"- **Supplier Performance** added: {result['performance']}")
+                        st.write(f"- **Production** records added: {result['production']}")
+
+                        if result["errors"]:
+                            st.warning(f"⚠️ {len(result['errors'])} row(s) had issues:")
+                            with st.expander("Show errors"):
+                                for err in result["errors"][:50]:
+                                    st.write(f"- {err}")
+
+                        st.info("👉 Now go to **🚨 Risk Alerts** tab and click **🔄 Refresh Risk Analysis** to detect risks from your imported data.")
+                    except Exception as e:
+                        st.error("Import failed.")
+                        st.write(e)
 
 # ================= REPORTS =================
 with tab8:
