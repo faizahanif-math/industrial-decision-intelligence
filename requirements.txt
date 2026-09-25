@@ -1,0 +1,6 @@
+streamlit
+psycopg[binary]
+bcrypt
+pandas
+fpdf2
+openpyxl
