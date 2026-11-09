@@ -18,6 +18,8 @@ from data_entry import (
     order_form,
     delivery_form
 )
+from styles import apply_custom_theme, render_header
+from assistant_engine import render_assistant_tab
 
 st.set_page_config(
     page_title="Industrial Decision Intelligence",
@@ -25,14 +27,15 @@ st.set_page_config(
     layout="wide"
 )
 
+apply_custom_theme()
+
 if "user" not in st.session_state:
     login_page()
     st.stop()
 
+user_info = st.session_state.get("user", {})
+render_header(user_info.get("full_name", "Administrator"), user_info.get("role", "ADMIN"))
 logout_button()
-
-st.title("🏭 Industrial Decision Intelligence & Risk Management System")
-st.caption("Industrial monitoring, analysis and risk management dashboard")
 
 def get_connection():
     params = {
@@ -216,7 +219,8 @@ c6.metric("🟢 NORMAL", normal_count)
 st.markdown("---")
 
 # ---------- Tabs ----------
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab_ai, tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    "🤖 AI Assistant",
     "📦 Inventory",
     "🏭 Suppliers",
     "⚙️ Production",
@@ -226,6 +230,10 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📝 Data Entry",
     "📄 Reports"
 ])
+
+# ================= AI ASSISTANT =================
+with tab_ai:
+    render_assistant_tab()
 
 # ================= INVENTORY =================
 with tab1:
